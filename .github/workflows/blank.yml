@@ -1,73 +1,30 @@
 name: CI
-
 on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: "main" ]
+    branches: [ "main" ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       # 设置 Java 环境（Android 需要 JDK）
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
       # 赋予 gradlew 执行权限（如果需要）
       - name: Make gradlew executable
         run: chmod +x gradlew
-
       # 构建 APK
       - name: Build APK
         run: ./gradlew assembleDebug  # 或 assembleRelease（需配置签名）
-
       # 上传 APK 作为工件
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk  # 根据你的模块和构建类型调整路径name: CI
-
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: "main" ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      # 设置 Java 环境（Android 需要 JDK）
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      # 赋予 gradlew 执行权限（如果需要）
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-
-      # 构建 APK
-      - name: Build APK
-        run: ./gradlew assembleDebug  # 或 assembleRelease（需配置签名）
-
-      # 上传 APK 作为工件
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk  # 根据你的模块和构建类型调整路径
+          path: app/build/outputs/apk/debug/app-debug.apk  # 根据你的模块和构建类型
