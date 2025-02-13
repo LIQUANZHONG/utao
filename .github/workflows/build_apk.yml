@@ -8,8 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      GRADLE_PROPERTIES_PATH: android/x5/gradle.properties  # 定义环境变量
 
     steps:
       - name: Checkout code
@@ -21,10 +19,23 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build with Gradle
+      - name: Check Gradle files
+        working-directory: android/x5
         run: |
-          chmod +x android/x5/gradlew
-          android/x5/gradlew -Dorg.gradle.project.propFile=$GRADLE_PROPERTIES_PATH build
+          if [ ! -f settings.gradle ] && [ ! -f settings.gradle.kts ]; then
+            echo "settings.gradle or settings.gradle.kts not found."
+            exit 1
+          fi
+          if [ ! -f build.gradle ] && [ ! -f build.gradle.kts ]; then
+            echo "build.gradle or build.gradle.kts not found."
+            exit 1
+          fi
+
+      - name: Build with Gradle
+        working-directory: android/x5
+        run: |
+          chmod +x gradlew
+          ./gradlew build
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
