@@ -19,13 +19,12 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Navigate to the correct directory
-        run: cd android/x5
-
       - name: Make gradlew executable
+        working-directory: utao/android/x5
         run: chmod +x gradlew
 
       - name: Build with Gradle
+        working-directory: utao/android/x5
         run: ./gradlew build
 
       - name: Upload APK artifact
