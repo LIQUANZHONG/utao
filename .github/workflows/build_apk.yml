@@ -4,31 +4,27 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GRADLE_PROPERTIES_PATH: android/x5/gradle.properties  # 定义环境变量
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
-          java-version: '17'  # 更新 Java 版本到 17
+          java-version: '17'
           distribution: 'temurin'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v2
-
-      - name: Build and assemble APK
+      - name: Build with Gradle
         run: |
-          cd utao/android/x5
-          ./gradlew assembleDebug
+          chmod +x android/x5/gradlew
+          android/x5/gradlew -Dorg.gradle.project.propFile=$GRADLE_PROPERTIES_PATH build
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
