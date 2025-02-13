@@ -3,40 +3,40 @@ name: Android Build
 on:
   push:
     branches:
-      - main  # 当 main 分支有推送时触发工作流
+      - main
   pull_request:
     branches:
-      - main  # 当有针对 main 分支的拉取请求时触发工作流
+      - main
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # 在最新版的 Ubuntu 环境中运行
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code  # 检出代码
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Java  # 设置 Java 环境
+      - name: Set up Java
         uses: actions/setup-java@v3
         with:
-          java-version: '11'  # 指定 Java 版本为 11
-          distribution: 'temurin'  # 指定 Java 发行版为 temurin
+          java-version: '17'  # 更新 Java 版本到 17
+          distribution: 'temurin'
 
-      - name: Set up Android SDK  # 设置 Android SDK
+      - name: Set up Android SDK
         uses: android-actions/setup-android@v2
 
-      - name: Build and assemble APK  # 构建并组装 APK
+      - name: Build and assemble APK
         run: |
-          cd utao/android/x5  # 进入 Android 项目目录
-          ./gradlew assembleDebug  # 构建 Debug 版本的 APK
+          cd utao/android/x5
+          ./gradlew assembleDebug
 
-      - name: Upload APK artifact  # 上传 APK 作为构建产物
-        uses: actions/upload-artifact@v4
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: utao-apk  # 构建产物的名称
-          path: utao/android/x5/app/build/outputs/apk/debug/app-debug.apk  # APK 文件的路径
+          name: utao-apk
+          path: utao/android/x5/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Output APK information  # 输出 APK 信息
+      - name: Output APK information
         run: |
           echo "APK 构建完成，文件路径：utao/android/x5/app/build/outputs/apk/debug/app-debug.apk"
-          ls -lh utao/android/x5/app/build/outputs/apk/debug/app-debug.apk  # 显示 APK 文件的详细信息
+          ls -lh utao/android/x5/app/build/outputs/apk/debug/app-debug.apk
