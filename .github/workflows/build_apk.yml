@@ -13,6 +13,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check utao/android/x5 directory content
+        run: ls -al utao/android/x5
+
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
@@ -21,7 +24,13 @@ jobs:
 
       - name: Make gradlew executable
         working-directory: utao/android/x5
-        run: chmod +x gradlew
+        run: |
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+          else
+            echo "gradlew file not found in utao/android/x5 directory."
+            exit 1
+          fi
 
       - name: Build with Gradle
         working-directory: utao/android/x5
