@@ -1,4 +1,4 @@
-
+LA.init({id:"3Kwwp7VWLvVgtOND",ck:"3Kwwp7VWLvVgtOND"});
 new FOCUS({
     event: {
         keyOkEvent: function () {
@@ -54,11 +54,14 @@ const _html={
             channels:[],
             apps:[],
             focusId:"",
+            qrCode:null,
+            qrUrl:null,
             historys:[],
             tab: "index",
             info:{
               sys:"当前系统",
-              version:"当前版本"
+              version:"当前版本",
+                x5Ok:true
             },
             initData(){
                 _data.initData(this);
@@ -72,25 +75,66 @@ const _html={
                 this.tab=item.tag;
                 if(item.tag==="history"){
                     this.historyFocus(item);
-                    return
                 }
                 if(item.tag==="set"){
                     this.setFocus(item)
                 }
+                if(item.tag==="search"){
+                    this.searchFocus(item)
+                }
+                let menuId="#tv-"+item.tag;
+                let hasFocus= $$(menuId).hasClass("tv-focus");
+                this.$nextTick(function (){
+                    if(hasFocus){
+                        $$(menuId).addClass("tv-focus");
+                    }
+                })
             },
             updateApk(){
                _apiX.msg("updateApk",null);
             },
+            clearCache(){
+                _apiX.msg("clearCache",null);
+            },
+            openX5(){
+                _apiX.msg("openX5",null);
+            },
+            openOkMenu(){
+                this.info.openOkMenu=!this.info.openOkMenu;
+                _apiX.msgStr("openOkMenu",this.info.openOkMenu?"1":"0");
+
+            },
+            closeApp(){
+                _apiX.msg("closeApp",null);
+            },
             historyChoose(item){
                 window.location.href=item.url;
+            },
+            searchFocus(item){
+                let _this=this;
+                _apiX.queryByService("queryIp",null,function (data){
+                    console.log("queryIp"+data);
+                    const text = "http://"+data+":10240/search.html";  // 要编码的内容
+                   // const imageElement = document.getElementById('qrcodeImage');  // 获取 img 元素
+                    _this.qrUrl=text;
+                    QRCode.toDataURL(text, function(error, url) {
+                        if (error) {
+                            console.error(error);
+                        } else {
+                            _this.qrCode=url;
+                            console.log("QR Code image successfully generated!");
+                        }
+                    });
+                });
             },
             setFocus(item){
                 let _this=this;
               //获取系统信息和 版本信息
-                _apiX.queryByService("" +
-                    "",null,function (data){
+                _apiX.queryByService("querySysInfo",null,function (data){
                     console.log("querySysInfo"+data);
                     let sysInfo=JSON.parse(data);
+                    _this.info=sysInfo;
+                   // _this.info.cacheSize=sysInfo.cacheSize;
                     let  version="当前版本:"+sysInfo.versionName;
                     if(sysInfo.haveNew){
                         version=version+" 发现新版 点击更新";
@@ -99,7 +143,7 @@ const _html={
                     let sysDesc="当前系统:";
                     let androidVer=getAndroidName(sysInfo.versionCode);
                     sysDesc=sysDesc+androidVer;
-                    if(sysInfo.is64){
+                    if(sysInfo.sys64){
                         sysDesc+=" 64位"
                     }else{
                         sysDesc+=" 32位"
@@ -112,18 +156,30 @@ const _html={
                 let _this=this;
                 _apiX.queryByService("queryHistory",null,function (data){
                     console.log("history.all"+data);
-                    _this.historys=JSON.parse(data);
+                    let dataArr= JSON.parse(data);
+                    let newArr=[];
+                    dataArr.forEach(item=>{
+                        if(item.site&&item.site.trim()!==""&&item.site.trim()!=="tv"){
+                            newArr.push(item);
+                        }
+                    })
+                    _this.historys=newArr;
                 });
             },
             appChoose(item){
                 console.log(`appChoose item ${item.name} ${item.url}`)
                 let dataUrl = item.url;
-                if (""!==dataUrl) {
+                if(_utao_version&&(_utao_version==="{version}"||_utao_version<=20)){
                     _layer.wait("请耐心等待跳转。。。");
                     window.location.href = dataUrl;
-                } else {
-                    _layer.notify("抱歉 还未适配 正在加急开发中。。。 敬请期待");
+                    return;
                 }
+                if(dataUrl==="tv.html"&& _tvFunc.isApp()){
+                        _apiX.msg("activity","live");
+                        return;
+                }
+                _layer.wait("请耐心等待跳转。。。");
+                window.location.href = dataUrl;
             },
             moveDown(id){
                 return "#tvd-"+id+":.tv-item";
@@ -169,6 +225,7 @@ let _data={
         if(!isGecko){
             bili="https://www.bilibili.com/tv-web/bili.html";
         }
+        //"https://tv.cctv.com/live/cctv13/" "tv.html"
         apps.push({id:0,url:"tv.html",name:"电视直播大全",pic:"img/utao.jpg"});
         apps.push({id:0,url:"https://www.yangshipin.cn/tv/home?pid=600002475",name:"CCTV直播",pic:"img/cctv.jpg"});
         apps.push({id:0,url:"cctv.html",name:"央视片库",pic:"img/cctv-video.jpg"});
@@ -194,7 +251,9 @@ let _data={
         if(!isGecko){
             apps.push({id:0,url:bili,name:"哔哩哔哩",pic:"img/bilibili.png"});
         }
-        //apps.push({id:0,url:"ty.html",name:"体育",pic:"img/utao.jpg"});
+        //apps.push({id:0,url:"https://www.douyin.com/?recommend=1",name:"抖音推荐",pic:"img/dy2.jpg"});
+        apps.push({id:0,url:"ty.html",name:"体育",pic:"img/utao.jpg"});
+        apps.push({id:0,url:"letv.html",name:"乐视",pic:"img/letv.jpg"});
         //apps.push({id:0,url:"douyin.html",name:"抖音推荐",pic:"img/douyin.jpeg"});
         apps.forEach((item,index)=>{
             item.id=index;
@@ -206,3 +265,4 @@ let _data={
 $$(function() {
     _html.init();
 });
+

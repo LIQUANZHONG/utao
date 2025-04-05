@@ -31,8 +31,10 @@ import tv.utao.x5.service.UpdateX5Service;
 import tv.utao.x5.util.AppVersionUtils;
 import tv.utao.x5.util.FileUtil;
 import tv.utao.x5.util.HttpUtil;
+import tv.utao.x5.util.LogUtil;
 import tv.utao.x5.util.Util;
 import tv.utao.x5.util.ValueUtil;
+import tv.utao.x5.utils.ToastUtils;
 
 public class StartActivity extends Activity {
     private long mClickBackTime = 0;
@@ -58,11 +60,10 @@ public class StartActivity extends Activity {
             public void getConfig(ConfigDTO configDTO) {
                 if(null==configDTO){
                     runOnUiThread(()->{
-                        String x5Ok=ValueUtil.getString(thisContext,"x5");
-                        if(x5Ok.equals("ok")||Util.isNotNeedX5()){
+                        if(Util.isX86()||x5Ok()||(Util.isNotNeedX5()&&!openX5())){
                             to();
                         }else{
-                            Toast.makeText(thisContext,"请求接口失败 请检查网络 2次返回键退出重进", Toast.LENGTH_SHORT).show();
+                            ToastUtils.show(thisContext,"请求接口失败 请检查网络 2次返回键退出重进", Toast.LENGTH_SHORT);
                         }
                     });
                     return;
@@ -71,7 +72,7 @@ public class StartActivity extends Activity {
                 int versionCode=  AppVersionUtils.getVersionCode();
                 ApkInfo apkInfo = configDTO.getApk();
                 int updateCode= apkInfo.getVersion();
-                Log.i(TAG,updateCode+" old "+versionCode);
+                LogUtil.i(TAG,updateCode+" old "+versionCode);
                 if(updateCode>versionCode){
                     //更新数据
                     runOnUiThread(()->{
@@ -103,27 +104,35 @@ public class StartActivity extends Activity {
         }
         return false;
     }
+    private boolean openX5(){
+        return "1".equals(ValueUtil.getString(getApplicationContext(),"openX5","0"));
+    }
+    private boolean x5Ok(){
+        return "ok".equals(ValueUtil.getString(getApplicationContext(),"x5","0"));
+    }
     private  void installX5(Context content,ConfigDTO configDTO){
-        String x5Ok=ValueUtil.getString(content,"x5");
+        boolean isX5Ok=x5Ok();
         boolean is64=Util.is64();
-        Log.i(TAG,"is64::: "+is64+" id "+MyApplication.androidId);
+        LogUtil.i(TAG,"is64::: "+is64+" id "+MyApplication.androidId);
         //new File(toFilePath).exists()
         //x5Ok.equals("ok")
         //boolean is64=Util.is64();
         boolean isX86 = Util.isX86();
-        if(x5Ok.equals("ok")){
-            Log.i(TAG, "x5  install  "+x5Ok);
+        if(isX5Ok){
+            LogUtil.i(TAG, "x5  install  "+isX5Ok);
             to();
             return;
         }
         //Build.VERSION_CODES.R 安卓11
         //Build.VERSION_CODES.P 安卓9
-        if(Util.isNotNeedX5()){
+        if(isX86){
+            LogUtil.i(TAG, "system  isX86");
             to();
             return;
         }
-        if(isX86){
-            Log.i(TAG, "system  isX86");
+        boolean isOpenX5=openX5();
+        LogUtil.i(TAG,"isOpenX5::::"+isOpenX5);
+        if(Util.isNotNeedX5()&&!isOpenX5){
             to();
             return;
         }
@@ -143,26 +152,32 @@ public class StartActivity extends Activity {
 
             @Override
             public void onDownloadResult(File target, boolean done) {
-                String fileName = target.getName();
-                String toFilePath=targetDir+fileName;
-                runOnUiThread(()->{
-                    Toast.makeText(content,"下载成功 正在安装启动中", Toast.LENGTH_SHORT).show();
-                    binding.progressWrapper.setVisibility(View.GONE);
-                    initX5(toFilePath);
-                });
+                if (target != null && target.exists()) {
+                    String fileName = target.getName();
+                    String toFilePath=targetDir+fileName;
+                    runOnUiThread(()->{
+                        ToastUtils.show(content,"下载成功 正在安装启动中", Toast.LENGTH_SHORT);
+                        binding.progressWrapper.setVisibility(View.GONE);
+                        initX5(toFilePath);
+                    });
+                } else {
+                    runOnUiThread(() -> {
+                        ToastUtils.show(StartActivity.this, "下载文件不存在，请重试", Toast.LENGTH_LONG);
+                    });
+                }
             }
 
             @Override
             public void onFailResponse() {
                 runOnUiThread(()->{
-                    Toast.makeText(content,"下载失败 请检查网络 2次返回退出重进", Toast.LENGTH_SHORT).show();
+                    ToastUtils.show(content,"下载失败 请检查网络 2次返回退出重进", Toast.LENGTH_SHORT);
                 });
             }
         });
         if(null!=toFilePath){
             runOnUiThread(()->{
                 if("error".equals(toFilePath)){
-                    Toast.makeText(content,"获取数据出错 请检查网络", Toast.LENGTH_SHORT).show();
+                    ToastUtils.show(content,"获取数据出错 请检查网络", Toast.LENGTH_SHORT);
                     return;
                 }
                 binding.progressWrapper.setVisibility(View.GONE);
@@ -189,29 +204,29 @@ public class StartActivity extends Activity {
 
     }
     public void initX5(String toFilePath){
-        Log.i(TAG, "initX5  begin  "+toFilePath);
+        LogUtil.i(TAG, "initX5  begin  "+toFilePath);
         resetSdk();
         QbSdk.installLocalTbsCore(getApplicationContext(), 1,
                 toFilePath);
         QbSdk.setTbsListener(new TbsListener() {
             @Override
             public void onDownloadFinish(int i) {
-                Log.i(TAG, "onDownload Finish " + i);
+                LogUtil.i(TAG, "onDownload Finish " + i);
             }
 
             @Override
             public void onDownloadProgress(int i) {
-                Log.i(TAG, "onDownload Progress " + i);
+                LogUtil.i(TAG, "onDownload Progress " + i);
             }
 
             @Override
             public void onInstallFinish(int i) {
-                Log.i(TAG, "onInstallFinish " + i);
+                LogUtil.i(TAG, "onInstallFinish " + i);
                 if(i==200){
                     //记录
                     ValueUtil.putString(getApplicationContext(),"x5","ok");
                     boolean canLoadX5 = QbSdk.canLoadX5(getApplicationContext());
-                    Log.i(TAG, "升级成功 canLoadX5:"+canLoadX5+" isX5Core "
+                    LogUtil.i(TAG, "升级成功 canLoadX5:"+canLoadX5+" isX5Core "
                              +" versionX5 "+QbSdk.getTbsVersion(getApplicationContext()));
                     to();
                 }
@@ -235,36 +250,49 @@ public class StartActivity extends Activity {
             //super.onBackPressed();
            // System.exit(0);
         } else {
-            Toast.makeText(this, "再按一次返回键退出", Toast.LENGTH_SHORT).show();
+            ToastUtils.show(this, "再按一次返回键退出", Toast.LENGTH_SHORT);
             mClickBackTime = currentTime;
         }
     }
 
-    public  class UpdateHandler{
+    public class UpdateHandler {
         private Context thisContext;
-        public UpdateHandler(Context context){
-            this.thisContext=context;
+        public UpdateHandler(Context context) {
+            this.thisContext = context;
         }
-        public  void updateOk(){
+        public void updateOk() {
             binding.progressApk.setVisibility(View.VISIBLE);
-            File targetFile = new File(thisContext.getFilesDir().getPath(),"x5.apk");
+            File targetFile = new File(thisContext.getFilesDir().getPath(), "x5.apk");
             HttpUtil.downloadByProgress(thisConfigDTO.getApk().getUrl(),
                     targetFile, new DownloadProgressListener() {
                         @Override
                         public void onDownloadProgress(long sumReaded, long content, boolean done) {
                             int num = (int)(sumReaded*100/content);
-                            binding.progressApk.setProgress(num);
+                            runOnUiThread(() -> {
+                                binding.progressApk.setProgress(num);
+                            });
                         }
 
                         @Override
                         public void onDownloadResult(File target, boolean done) {
-                                  Util.installApk(thisContext,target);
+                            runOnUiThread(() -> {
+                                if (target != null && target.exists()) {
+                                    try {
+                                        Util.installApk(StartActivity.this, target);
+                                    } catch (Exception e) {
+                                        LogUtil.e(TAG, "Error installing APK: " + e.getMessage());
+                                        ToastUtils.show(StartActivity.this, "安装失败，请重试", Toast.LENGTH_LONG);
+                                    }
+                                } else {
+                                    ToastUtils.show(StartActivity.this, "下载文件不存在，请重试", Toast.LENGTH_LONG);
+                                }
+                            });
                         }
 
                         @Override
                         public void onFailResponse() {
-                            runOnUiThread(()->{
-                                Toast.makeText(thisContext,"下载失败 请检查网络 2次返回退出重进", Toast.LENGTH_SHORT).show();
+                            runOnUiThread(() -> {
+                                ToastUtils.show(thisContext, "下载失败，请检查网络后重试", Toast.LENGTH_SHORT);
                             });
                         }
                     });

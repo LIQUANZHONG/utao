@@ -13,6 +13,9 @@ const Filter = {
             const html = `
             <div class="tv-body" id="tv-body" @vue:mounted="initData()">
               <div class="tv-header">
+                {{desc}}
+              </div>
+              <div class="tv-header">
                 <div  tabindex="0" v-for="item in filters" class="tv-btn" :id="tvId(item,'fi-')" :class="{'tv-active':item==currentChannel.filter}"
                 @focus="switchFilter(item)" @click="switchFilter(item)"
                    :move-down="tvId(currentChannel.tag,'#tv-')">{{filterName(item)}}</div>
@@ -38,6 +41,7 @@ const Filter = {
                 currentChannel:null,
                 focusId:"tv",
                 filters:[],
+                desc:null,
                 initData(){
                     _data.initData(this);
                     if(this.channels.length>0){
@@ -90,7 +94,10 @@ const Filter = {
                     _layer.wait("正在跳转到 "+item.name+" 请耐心等待。。。");
                     item.url=_tvFunc.url(item.url);
                     console.log(item.url);
-                    if(!isApp){
+                    if(!isApp||_tvFunc.isGecko()){
+                        if(item.url.startsWith("https://tv.utao.tv/tv-web/")){
+                            item.url=item.url.substring(26);
+                        }
                         window.location.href = item.url;
                         return;
                     }

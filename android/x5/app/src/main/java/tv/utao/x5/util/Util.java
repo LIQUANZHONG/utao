@@ -1,13 +1,17 @@
 package tv.utao.x5.util;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.net.Uri;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.core.content.FileProvider;
 
@@ -19,6 +23,7 @@ import java.text.MessageFormat;
 import java.util.Date;
 
 import tv.utao.x5.BuildConfig;
+import tv.utao.x5.utils.ToastUtils;
 
 public class Util {
     private static String TAG = "Util";
@@ -29,13 +34,13 @@ public class Util {
             @Override
             public void run() {
                 // 在这里调用你的View方法
-                Log.i(TAG,"evalOnUi "+javascript);
+                LogUtil.i(TAG,"evalOnUi "+javascript);
                 eval(webView,javascript,null);
             }
         });
     }
     public static  boolean isDev(){
-        Log.i(TAG,"BUILD_ENV_TYPE "+ BuildConfig.BUILD_ENV_TYPE);
+        LogUtil.i(TAG,"BUILD_ENV_TYPE "+ BuildConfig.BUILD_ENV_TYPE);
         return  "dev".equals(BuildConfig.BUILD_ENV_TYPE);
     }
     public static void  eval(WebView webView , String javascript){
@@ -106,16 +111,39 @@ public class Util {
     }
 
     public static void installApk(Context context, File apkFile) {
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            Uri contentUri = FileProvider.getUriForFile(context,
-                    context.getPackageName() + ".fileProvider", apkFile);
-            intent.setDataAndType(contentUri, "application/vnd.android.package-archive");
-        } else {
-            intent.setDataAndType(Uri.parse("file://" + apkFile.toString()), "application/vnd.android.package-archive");
+        try {
+            if (context == null || apkFile == null || !apkFile.exists()) {
+                LogUtil.e(TAG, "Invalid context or APK file");
+                return;
+            }
+
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                Uri contentUri = FileProvider.getUriForFile(context,
+                        BuildConfig.APPLICATION_ID + ".fileProvider", apkFile);
+                intent.setDataAndType(contentUri, "application/vnd.android.package-archive");
+            } else {
+                intent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
+            }
+            
+            // Ensure we're using activity context
+            Context activityContext = context;
+            if (!(context instanceof Activity)) {
+                if (context.getApplicationContext() != null) {
+                    activityContext = context.getApplicationContext();
+                }
+            }
+            
+            activityContext.startActivity(intent);
+        } catch (Exception e) {
+            LogUtil.e(TAG, "Error installing APK: " + e.getMessage());
+           // e.printStackTrace();
+            ToastUtils.show(context, "安装APK时出错，请重试", Toast.LENGTH_LONG);
         }
-        context.startActivity(intent);
     }
 
     public  static  boolean isNotNeedX5(){
@@ -126,4 +154,22 @@ public class Util {
         }
         return false;
     }
+    // wifi下获取本地网络IP地址（局域网地址）
+    public static String getLocalIPAddress(Context context) {
+        WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+        if (wifiManager != null) {
+           // @SuppressLint("MissingPermission")
+            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+            String ipAddress = intIP2StringIP(wifiInfo.getIpAddress());
+            return ipAddress;
+        }
+        return "";
+    }
+    public static String intIP2StringIP(int ip) {
+        return (ip & 0xFF) + "." +
+                ((ip >> 8) & 0xFF) + "." +
+                ((ip >> 16) & 0xFF) + "." +
+                (ip >> 24 & 0xFF);
+    }
+
 }

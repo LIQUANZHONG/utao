@@ -1,9 +1,6 @@
-const _ctrlx={
-    play(){
-        _menuCtrl.menu();
-    }
-};
+
 (function(){
+    _tvFunc.fixedW("body");
     _tvFunc.check(function (){return $$(".channel-list .item").length>0},function (){
         let url = window.location.href;
          let index= url.indexOf("tag=");
@@ -33,30 +30,7 @@ const _ctrlx={
             // document.getElementsByTagName("video")[0].classList.add("utv-video-full");
         });
     });
-
-    let _app={
-        init(){
-            _tvFunc.check(function(){return  document.getElementsByTagName("video").length>0;},function(index){
-                //全屏
-                let menuId = _detailInit(null,999990,true);
-            },1000);
-        }
-    };
-    _app.init();
+    _tvFunc.volume100();
 
 
 })();
-
-let _data={
-    vue:null,
-    initData(vue){
-        this.vue=vue;
-        this.vue.video=false;
-        this.fullscreen();
-    },
-    fullscreen(){
-        //$$("#player_pagefullscreen_msg_player").click();
-        //音量100
-        _tvFunc.volume100();
-    }
-};

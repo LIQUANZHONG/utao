@@ -1,16 +1,18 @@
 html,body{
-  margin: 0;
-    background: #E3EDCD;
+  /*margin: 0;*/
+    /*background: #E3EDCD;*/
+    /*#background: #E3EDCD;;*/
+
 }
 
 .tv-body{
   width: 100%;
-  background: #E3EDCD;
+  background: #FAF9DE;
    /* background-color: #FAF9DE; */
   display: flex;
   flex-direction: column;
-  visibility: visible;
-  height: 100vh;
+  /*visibility: visible;*/
+  /*height: 100vh;*/
 }
 .tv-font-2{
     font-size: 2vw;
@@ -127,6 +129,7 @@ html,body{
 }
 .tv-header{
 /*  overflow-x: hidden;  justify-content: space-around;*/
+    overflow-x: auto;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -156,10 +159,16 @@ html,body{
     cursor: pointer;
     word-spacing: normal;
     max-width: 15vw;
-    background-color: #5ca9e8;
+    /*background-color: #5ca9e8;*/
+    background-color:#FAF9DE;
+    /*background-color:#FAF9DE;*/
     flex-shrink: 0;
- /* background-color: #5ca9e8;*/
-  font-family: "tv-icon" !important;
+    font-family: "tv-icon" !important;
+    /*box-shadow: none;*/
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+    background: rgba(255, 255, 240, 0.3); /* 半透明背景 */
+    backdrop-filter: blur(10px);
 }
 .tv-btn-vw{
   padding: 0.5vw 1vw;
@@ -177,6 +186,9 @@ html,body{
 .tv-bg-yellow{
   background-color:#E3EDCD;
 }
+.tv-bg-black{
+    background-color:rgb(0, 0, 0);
+}
 .tv-bg-3{
   background-color:#333333;
 }
@@ -188,12 +200,18 @@ html,body{
 }
 
 .tv-active{
-    background-color: #71b371;
+    /*background-color: #71b371;*/
+    /*background:#FAF9DE;*/
+    /*box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);*/
+    box-shadow: none;
 }
 .tv-focus {
     border: 2px solid blue;
     background-color :#16baaa;
+    /*background-color :#16baaa;*/
     color: white;
+    box-shadow: 0px 0px 20px 0px rgba(0,0,0,0.5);
+    border-radius: 2vw;
     img{
         width: 110%;
     }

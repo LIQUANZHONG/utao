@@ -3,8 +3,10 @@ package tv.utao.x5;
 import static tv.utao.x5.util.PermissionUtil.REQUEST_EXTERNAL_STORAGE;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -12,6 +14,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowManager;
@@ -63,10 +67,15 @@ import tv.utao.x5.impl.WebViewClientImpl;
 import tv.utao.x5.impl.X5WebChromeClientExtension;
 import tv.utao.x5.service.UpdateService;
 import tv.utao.x5.util.AppVersionUtils;
+import tv.utao.x5.util.DataCleanManager;
 import tv.utao.x5.util.FileUtil;
 import tv.utao.x5.util.HttpUtil;
 import tv.utao.x5.util.JsonUtil;
+import tv.utao.x5.util.LogUtil;
 import tv.utao.x5.util.Util;
+import tv.utao.x5.util.ValueUtil;
+import tv.utao.x5.util.WebService;
+import tv.utao.x5.utils.ToastUtils;
 
 
 /**
@@ -75,7 +84,7 @@ import tv.utao.x5.util.Util;
 public class BaseWebViewActivity extends Activity {
     protected String TAG = "BaseWebViewActivity";
 
-    protected  com.tencent.smtt.sdk.WebView mWebView;
+    public static com.tencent.smtt.sdk.WebView mWebView;
 
 
 
@@ -88,8 +97,14 @@ public class BaseWebViewActivity extends Activity {
     protected  ActivityMainBinding binding;
 
     private Context thisContext;
-
-
+    private boolean x5Ok(){
+        return "ok".equals(ValueUtil.getString(this,"x5","0"));
+    }
+    private void toStart(){
+        Intent intent = new Intent(this, StartActivity.class);
+        startActivity(intent);
+        finish();
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -101,16 +116,10 @@ public class BaseWebViewActivity extends Activity {
         thisContext=this;
         UpdateService.updateRes(thisContext);
         initWebView();
+        //mWebView.requestFocus();
         //file:///android_asset/tv-web/index.html http://www.utao.tv/tv-web/index.html
         mWebView.loadUrl(mHomeUrl);
         ConfigApi.syncIsX5Ok(this);
-       /* new Thread(()-> {
-            //https://raw.githubusercontent.com/hxh19950701/WebViewTvLive/main/app/channels/2.0/%E5%AE%8C%E6%95%B4.json
-            String json= HttpUtil.getJson("http://www.vonchange.com/doc/host.html",new HashMap<>());
-             Log.i(TAG,json);
-            json=HttpUtil.getJson("https://tv.utao.tv",new HashMap<>());
-            Log.i(TAG,json);
-            }).start();*/
     }
 
 
@@ -156,7 +165,7 @@ public class BaseWebViewActivity extends Activity {
         // 在WebView的初始化代码中启用缓存
         IX5WebSettingsExtension webSettingsExtension=  mWebView.getSettingsExtension();
         if(null!=webSettingsExtension){
-            Log.i(TAG,"isX5 webSettingsExtension");
+            LogUtil.i(TAG,"isX5 webSettingsExtension");
             //webSettingsExtension.setDayOrNight(false);
             //webSettingsExtension.setFitScreen(true);//会乱适配 // webSettingsExtension.setSmartFullScreenEnabled(true);
             webSettingsExtension.setAcceptCookie(true);
@@ -169,6 +178,8 @@ public class BaseWebViewActivity extends Activity {
         }
         initWebViewClient();
         initWebChromeClient();
+        //禁止上下左右滚动(不显示滚动条)
+        mWebView.setScrollContainer(false);
         mWebView.setVerticalScrollBarEnabled(false);
         mWebView.setHorizontalScrollBarEnabled(false);
 
@@ -185,30 +196,30 @@ public class BaseWebViewActivity extends Activity {
 
 
     private void initWebViewClient() {
-        mWebView.setWebViewClient(new WebViewClientImpl(getBaseContext(),mWebView));
+        mWebView.setWebViewClient(new WebViewClientImpl(getBaseContext(),mWebView,0));
     }
 
     private void initWebChromeClient() {
         mWebView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
-                Log.i("WebChromeClient", "onProgressChanged, newProgress:" + newProgress + ", view:" + view);
+                LogUtil.i("WebChromeClient", "onProgressChanged, newProgress:" + newProgress + ", view:" + view);
             }
             @Override
             public void onShowCustomView(View view, IX5WebChromeClient.CustomViewCallback callback) {
-                Log.i("WebChromeClient","onShowCustomView");
+                LogUtil.i("WebChromeClient","onShowCustomView");
                 binding.fullscreen.addView(view);
                 binding.fullscreen.setVisibility(View.VISIBLE);
             }
             @Override
             public void onPermissionRequest(PermissionRequest request) {
-                Log.i("WebChromeClient","onPermissionRequest "+request.getOrigin());
-                Log.i("WebChromeClient",request.getOrigin()+" "+ Arrays.toString(request.getResources()));
+                LogUtil.i("WebChromeClient","onPermissionRequest "+request.getOrigin());
+                LogUtil.i("WebChromeClient",request.getOrigin()+" "+ Arrays.toString(request.getResources()));
                 request.deny();
             }
             @Override
             public void onHideCustomView() {
-                Log.i("WebChromeClient","onHideCustomView");
+                LogUtil.i("WebChromeClient","onHideCustomView");
                 binding.fullscreen.removeAllViews();
                 binding.fullscreen.setVisibility(View.GONE);
             }
@@ -229,19 +240,13 @@ public class BaseWebViewActivity extends Activity {
             } else {
                 // 权限被拒绝，需要进行一些UX处理
             }
-            Log.i(TAG, "onRequestPermissionsResult: initWebView");
+            LogUtil.i(TAG, "onRequestPermissionsResult: initWebView");
             //initX5();
             initWebView();
         }
     }
 
-    @Override
-    protected void onDestroy() {
-        if (mWebView != null) {
-            mWebView.destroy();
-        }
-        super.onDestroy();
-    }
+
 
 
     //菜单
@@ -249,9 +254,9 @@ public class BaseWebViewActivity extends Activity {
         if(!(newFocus instanceof Button)){
             return null;
         }
-        if(null!=oldFocus){  oldFocus.setScaleX(1.0f); oldFocus.setScaleY(1.0f);}
+     /*   if(null!=oldFocus){  oldFocus.setScaleX(1.0f); oldFocus.setScaleY(1.0f);}
         newFocus.setScaleX(1.1f);
-        newFocus.setScaleY(1.1f);
+        newFocus.setScaleY(1.1f);*/
         return (Button) newFocus;
 
     }
@@ -338,7 +343,7 @@ public class BaseWebViewActivity extends Activity {
                             //old上一个是选集btn 下一个是item 自动选择
                             if(oldTag.equals("menu_xj")){
                                 int id =  binding.xjsView.getLayoutManager().getItemCount();
-                                Log.i(TAG,"count "+ id+" "+ binding.xjsView.getChildCount()+" "+binding.xjsView.getAdapter().getItemCount());
+                                LogUtil.i(TAG,"count "+ id+" "+ binding.xjsView.getChildCount()+" "+binding.xjsView.getAdapter().getItemCount());
                                 int viewCount= binding.xjsView.getChildCount();
                                 int num=binding.getMenu().getNow().getXj().getIndex();
                                 if(num>viewCount){
@@ -352,7 +357,7 @@ public class BaseWebViewActivity extends Activity {
                         }
                         break;
                     default:
-                        Log.i(TAG,"setTab"+tag);
+                        LogUtil.i(TAG,"setTab"+tag);
                         break;
                 }
             }
@@ -421,7 +426,7 @@ public class BaseWebViewActivity extends Activity {
     public  class XjBindPresenter implements IBaseBindingPresenter {
 
         public void onClick(XjItem item) {
-            Log.i(TAG,item.getTitle());
+            LogUtil.i(TAG,item.getTitle());
             //TestActivity.binding.getMenu().getNow().setXj(item);
             hideMenu();
             postMessage("click","xj-"+item.getId());
@@ -431,7 +436,7 @@ public class BaseWebViewActivity extends Activity {
     public  class JdBindPresenter implements IBaseBindingPresenter {
 
         public void onClick(JdItem item) {
-            Log.i(TAG,item.getName());
+            LogUtil.i(TAG,item.getName());
             hideMenu();
             postMessage("click","jd-"+item.getId());
 
@@ -441,7 +446,7 @@ public class BaseWebViewActivity extends Activity {
     public    class HzBindPresenter implements IBaseBindingPresenter {
 
         public void onClick(HzItem item) {
-            Log.i(TAG,item.getName());
+            LogUtil.i(TAG,item.getName());
             hideMenu();
             postMessage("click","hz-"+item.getId());
 
@@ -450,7 +455,7 @@ public class BaseWebViewActivity extends Activity {
     public  class RateBindPresenter implements IBaseBindingPresenter {
 
         public void onClick(RateItem item) {
-            Log.i(TAG,item.getName());
+            LogUtil.i(TAG,item.getName());
             hideMenu();
             postMessage("click","rate-"+item.getId());
 
@@ -468,7 +473,7 @@ public class BaseWebViewActivity extends Activity {
             mWebView.reload();
         }
         public void btnClick(View view){
-            Log.i(TAG,"btnClick "+view);
+            LogUtil.i(TAG,"btnClick "+view);
             //binding.tvMenu.setFocusable(true);
              view.requestFocus();
         }
@@ -485,7 +490,10 @@ public class BaseWebViewActivity extends Activity {
     protected void showMenu(String data){
         //binding.webView.setFocusable(false);
         //binding.tvMenu.setFocusable(true);
-        Log.i(TAG,"data:: "+data);
+        LogUtil.i(TAG,"data:: "+data);
+        if(null==data||!data.startsWith("{")){
+            return;
+        }
         DetailMenu detailMenu = JsonUtil.fromJson(data, DetailMenu.class);
         binding.setMenu(detailMenu);
         xjBlind(detailMenu.getXjs());
@@ -510,25 +518,56 @@ public class BaseWebViewActivity extends Activity {
     public    void postMessage(String service, String data) {
         if(service.equals("click")){
             String click=Util.click(data);
-            Log.i(TAG,"clickCode: "+click);
+            LogUtil.i(TAG,"clickCode: "+click);
             mWebView.evaluateJavascript(click,null);
         }
     }
 
-
+    private void toLive(){
+        Intent intent = new Intent(this, LiveActivity.class);
+        startActivity(intent);
+        finish();
+    }
+    protected void killAppProcess()
+    {
+        //注意：不能先杀掉主进程，否则逻辑代码无法继续执行，需先杀掉相关进程最后杀掉主进程
+        ActivityManager mActivityManager = (ActivityManager)this.getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningAppProcessInfo> mList = mActivityManager.getRunningAppProcesses();
+        for (ActivityManager.RunningAppProcessInfo runningAppProcessInfo : mList)
+        {
+            if (runningAppProcessInfo.pid != android.os.Process.myPid())
+            {
+                android.os.Process.killProcess(runningAppProcessInfo.pid);
+            }
+        }
+        android.os.Process.killProcess(android.os.Process.myPid());
+        System.exit(0);
+    }
+    private  static  WebService webService=null;
+    private void newWebService(){
+        if(null==webService){
+            webService=new WebService(10240);
+        }
+    }
+    protected boolean openOkMenu(){
+        return "1".equals(ValueUtil.getString(getApplicationContext(),"openOkMenu","0"));
+    }
     //js
     public class JsInterface{
 
         // Android 调用 Js 方法1 中的返回值
         @JavascriptInterface
         public void toast(String message){
-            Log.i(TAG,"message "+message);
-            Toast.makeText(MyApplication.getContext(),message, Toast.LENGTH_SHORT)
-                    .show();
+            LogUtil.i(TAG,"message "+message);
+            ToastUtils.show(MyApplication.getContext(),message, Toast.LENGTH_SHORT);
         }
         @JavascriptInterface
         public void message(String service,String data){
-            Log.i(TAG,"service "+service+" data "+data);
+            LogUtil.i(TAG,"service "+service+" data "+data);
+            if("activity".equals(service)){
+                toLive();
+                return;
+            }
             if("history.save".equals(service)){
                 //final AppDatabase db = AppDatabase.getInstance(this);
                 HistoryDaoX.save(thisContext, data, new StringCallback() {
@@ -556,6 +595,28 @@ public class BaseWebViewActivity extends Activity {
                 });
                 return;
             }
+            if("openX5".equals(service)){
+                ValueUtil.putString(getApplicationContext(),"openX5","1");
+                ToastUtils.show(thisContext, "开启内核成功 重启应用后生效",Toast.LENGTH_SHORT);
+                killAppProcess();
+                //showToastOrg("开启内核成功 重启应用后生效",thisContext);
+                //toStart();
+                return;
+            }
+            if("openOkMenu".equals(service)){
+                ValueUtil.putString(getApplicationContext(),"openOkMenu",data);
+                if(data.equals("1")){
+                    ToastUtils.show(thisContext, "开启OK键是菜单成功",Toast.LENGTH_SHORT);
+                }else{
+                    ToastUtils.show(thisContext, "关闭OK键是菜单成功",Toast.LENGTH_SHORT);
+                }
+
+                return;
+            }
+            if("closeApp".equals(service)){
+                killAppProcess();
+                return;
+            }
             if("js".equals(service)){
                 Util.evalOnUi(mWebView,data);
                 return;
@@ -566,6 +627,12 @@ public class BaseWebViewActivity extends Activity {
             }
             if("keyNum".equals(service)){
                 keyEventAll(Integer.parseInt(data));
+                return;
+            }
+            if("clearCache".equals(service)){
+                DataCleanManager.cleanInternalCache(thisContext);
+                DataCleanManager.cleanExternalCache(thisContext);
+                ToastUtils.show(thisContext, "清理缓存成功 网站可能会要求重新扫码登录",Toast.LENGTH_SHORT);
                 return;
             }
             if("updateApk".equals(service)){
@@ -584,17 +651,25 @@ public class BaseWebViewActivity extends Activity {
                             }
                 });
             }
-            //Toast.makeText(MyApplication.getContext(),data, Toast.LENGTH_SHORT)
-            // .show();
         }
         @JavascriptInterface
         public String queryByService(String service,String extPraram){
-            Log.i(TAG,"queryByService "+service+" extPraram "+extPraram);
+            LogUtil.i(TAG,"queryByService "+service+" extPraram "+extPraram);
             if("queryHistory".equals(service)){
                 return JsonUtil.toJson(HistoryDaoX.queryHistory(thisContext));
             }
+            if("queryIp".equals(service)){
+                //开启服务 有且只有一次
+                newWebService();
+                return Util.getLocalIPAddress(thisContext);
+            }
             if("querySysInfo".equals(service)){
                ConfigDTO configDTO= ConfigApi.getConfig();
+                String oldJson= FileUtil.readExt(MyApplication.getAppContext(),"tv-web/update.json");
+                ConfigDTO oldConfig = null;
+                if(!oldJson.trim().isEmpty()){
+                     oldConfig = JsonUtil.fromJson(oldJson,ConfigDTO.class);
+                }
                 int versionCode=  AppVersionUtils.getVersionCode();
                 ApkInfo apkInfo = configDTO.getApk();
                 int updateCode= apkInfo.getVersion();
@@ -603,10 +678,19 @@ public class BaseWebViewActivity extends Activity {
                     sysInfo.setHaveNew(true);
                 }
                 boolean is64= Util.is64();
-                sysInfo.setIs64(is64);
+                sysInfo.setSys64(is64);
                 sysInfo.setVersionCode(Build.VERSION.SDK_INT);
+                sysInfo.setX5Ok(x5Ok());
+                sysInfo.setX86(Util.isX86());
+                sysInfo.setDeviceId(MyApplication.androidId);
+                sysInfo.setOpenOkMenu(openOkMenu());
+                sysInfo.setCacheSize(DataCleanManager.getCacheSize(thisContext));
                 //Build.VERSION.SDK_INT
                 sysInfo.setVersionName(AppVersionUtils.getVersionName());
+                if(null!=oldConfig){
+                    sysInfo.setResVersion(""+oldConfig.getRes().getVersion());
+                }
+
                 return JsonUtil.toJson(sysInfo);
             }
             return null;
@@ -617,9 +701,9 @@ public class BaseWebViewActivity extends Activity {
             Map<String, String> headerMap= JsonUtil.fromJson(header,
                     new TypeToken<Map<String, String>>() {}.getType());
             if(!url.startsWith("http")){
-                return FileUtil.readExt("tv-web/"+url);
+                return FileUtil.readExt(MyApplication.getAppContext(),"tv-web/"+url);
             }
-            Log.i(TAG,headerMap.toString()+"url "+url+" "+requestBody);
+            LogUtil.i(TAG,headerMap.toString()+"url "+url+" "+requestBody);
             return HttpUtil.postJson(url,headerMap,requestBody);
         }
         @JavascriptInterface
@@ -627,20 +711,22 @@ public class BaseWebViewActivity extends Activity {
             Map<String, String> headerMap= JsonUtil.fromJson(header,
                     new TypeToken<Map<String, String>>() {}.getType());
             if(!url.startsWith("http")){
-                return FileUtil.readExt("tv-web/"+url);
+                return FileUtil.readExt(MyApplication.getAppContext(),"tv-web/"+url);
             }
-            Log.i(TAG,headerMap.toString()+"url "+url);
+            LogUtil.i(TAG,headerMap.toString()+"url "+url);
             return HttpUtil.getJson(url,headerMap);
         }
         @JavascriptInterface
         public String getHtml(String url,String header){
             Map<String, String> headerMap= JsonUtil.fromJson(header,
                     new TypeToken<Map<String, String>>() {}.getType());
-            Log.i(TAG,headerMap.toString()+" getHtml "+url);
+            LogUtil.i(TAG,headerMap.toString()+" getHtml "+url);
             return HttpUtil.getJson(url,headerMap);
         }
 
     }
+
+
 
 
     //key event
@@ -654,14 +740,14 @@ public class BaseWebViewActivity extends Activity {
     protected void keyCodeAllByCode(String keyCode){
         Integer keyCodeNum=  keyCodeMap.get(keyCode);
         if(null==keyCodeNum){return;}
-        Log.i("onKeyEvent", "keyCodeStr "+keyCode);
+        LogUtil.i("onKeyEvent", "keyCodeStr "+keyCode);
         keyEventAll(keyCodeNum);
     }
     protected void keyEventAll(final int keyCode){
         new Thread() {
             public void run() {
                 try {
-                    Log.i("onKeyEvent", "onKeyEvent"+keyCode);
+                    LogUtil.i("onKeyEvent", "onKeyEvent"+keyCode);
                     inst.sendKeySync(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
                     inst.sendKeySync(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
                 } catch (Exception e) {
@@ -669,6 +755,99 @@ public class BaseWebViewActivity extends Activity {
                 }
             }
         }.start();
+    }
+    private boolean isWebViewDestroyed = false;
+
+    @Override
+    protected void onPause() {
+        if (mWebView != null) {
+            try {
+                // 暂停 WebView 以减少资源使用
+                mWebView.onPause();
+                // 暂停 JS 执行
+                mWebView.getSettings().setJavaScriptEnabled(false);
+            } catch (Exception e) {
+                LogUtil.e(TAG, "Error pausing WebView", e);
+            }
+        }
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mWebView != null && !isWebViewDestroyed) {
+            try {
+                // 恢复 WebView
+                mWebView.onResume();
+                // 恢复 JS 执行
+                mWebView.getSettings().setJavaScriptEnabled(true);
+            } catch (Exception e) {
+                LogUtil.e(TAG, "Error resuming WebView", e);
+            }
+        }
+    }
+    /**
+     * 安全地销毁 WebView
+     */
+    private void destroyWebView() {
+        if (mWebView != null && !isWebViewDestroyed) {
+            // 标记 WebView 已销毁，防止重复操作
+            isWebViewDestroyed = true;
+
+            try {
+                // 移除所有 JS 接口
+                mWebView.removeJavascriptInterface("android");
+                // 其他可能的 JS 接口...
+
+                // 加载空白页面
+                mWebView.loadUrl("about:blank");
+
+                // 清除历史
+                mWebView.clearHistory();
+
+                // 从父视图中移除
+                ViewParent parent = mWebView.getParent();
+                if (parent instanceof ViewGroup) {
+                    ((ViewGroup) parent).removeView(mWebView);
+                }
+
+                // 停止加载
+                mWebView.stopLoading();
+
+                // 清除缓存
+                mWebView.clearCache(true);
+                mWebView.clearFormData();
+                mWebView.clearSslPreferences();
+
+                // 销毁 WebView
+                mWebView.destroy();
+                // 设置为 null
+                mWebView = null;
+            } catch (Exception e) {
+                LogUtil.e(TAG, "Error destroying WebView", e);
+            }
+        }
+    }
+    @Override
+    protected void onDestroy() {
+        destroyWebView();
+        super.onDestroy();
+    }
+    /**
+     * 防止内存泄漏的额外措施
+     */
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (mWebView != null) {
+            try {
+                // 停止所有可能的后台处理
+                mWebView.stopLoading();
+            } catch (Exception e) {
+                LogUtil.e(TAG, "Error stopping WebView", e);
+            }
+        }
     }
 
 }

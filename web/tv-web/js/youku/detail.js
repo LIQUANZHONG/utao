@@ -66,10 +66,10 @@ const  _ctrlx={
     }
     $$(function(){
         _tvFunc.check(function(){
-            console.log("usercenter "+$$("[data-spm='usercenter']").length);
-            return $$("[data-spm='usercenter']").length>0;},function(){
+            console.log("usercenter "+$$(".crmusercenter_user_center_box").length);
+            return $$(".crmusercenter_user_center_box").length>0;},function(){
             setTimeout(function (){
-                let loginTitle = $$("[data-spm='usercenter']").find("img").attr("title");
+                let loginTitle = $$(".crmusercenter_user_center_box").find("img").attr("title");
                 //yklogininstance.isLoginStatus;
                 console.log("isLogin:: "+loginTitle)
                 if(""===loginTitle){
@@ -115,7 +115,11 @@ const _data={
     },
     xjList(){
        let nowId = __INITIAL_DATA__.videoId;
-       let vodId= __INITIAL_DATA__.showId;
+        let vodId= __INITIAL_DATA__.showId;
+       if(!nowId){
+           nowId=__INITIAL_DATA__.pageMap.extra.videoId;
+           vodId=__INITIAL_DATA__.pageMap.extra.showId;
+       }
        //请求手机端html 获取数据
        let requestUrl=`https://m.youku.com/video/id_${nowId}`;
        console.log("requestUrl::"+requestUrl);
@@ -138,6 +142,7 @@ const _data={
               //  console.log("html::"+dataListStr);
                 let list=  xjItem.dataNode;
                 $$.each(list,function(index,item){
+                    //console.log("item",item);
                     let title= _tvFunc.titleQ(item.data.stage,item.data.title);
                         //`第${item.data.stage}集`;
                     let id= item.data.action.value;
@@ -146,7 +151,7 @@ const _data={
                     if(item.data.videoType==="预告片"){
                         remark="预告";
                     }
-                    let itemData={vodId:vodId,id:index,url:url,isVip:false,remark:remark,title:title,index:index,"site":"youku"};
+                    let itemData={vodId:vodId,id:index,url:url,isVip:false,name:item.data.title,remark:remark,title:title,index:index,"site":"youku"};
                     if(nowId===id){
                         _data.vue.now.xj=itemData;
                         _tvFunc.currentXj(itemData)
@@ -156,7 +161,7 @@ const _data={
             }
        });
     },
-    rateList(){
+/*    rateList(){
       
         $$("[data-spm='speed']").each(function(index,item){
             let id=index.toString();
@@ -172,6 +177,13 @@ const _data={
             }
             _data.vue.rates.push(itemData);
          });
+    },*/
+    rateList(){
+        _data.vue.rates.push({id:"10X",name:"1.0",isCurrent:true,videoDo:true});
+        _data.vue.rates.push({id:"10X",name:"1.25",isCurrent:true,videoDo:true});
+        _data.vue.rates.push({id:"15X",name:"1.5",isCurrent:false,videoDo:true});
+        _data.vue.rates.push({id:"20X",name:"2.0",isCurrent:false,videoDo:true});
+        _data.vue.rates.push({id:"20X",name:"3.0",isCurrent:false,videoDo:true});
     },
     hzList(hzCallback){
             let hzNow= $$("[com='quality']").find(".control-label").text();

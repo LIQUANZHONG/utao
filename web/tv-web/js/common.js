@@ -6,6 +6,18 @@ if(typeof _tvIsGecko === "undefined"){
     _tvIsGecko=false;
 }
 var _tvFunc={
+    // 获取url请求参数
+    getQueryParams() {
+      var query = location.search.substring(1)
+      var arr = query.split('&')
+      var params = {}
+      for (var i = 0; i < arr.length; i++) {
+          var pair = arr[i].split('=')
+         params[pair[0]] = pair[1]
+      }
+     console.log(params)
+     return params
+   },
     isApp(){
         return _tvIsApp;
     },
@@ -18,6 +30,15 @@ var _tvFunc={
       }
      let index= window.location.href.lastIndexOf("/")
         return window.location.href.substring(0,index+1)+url;
+    },
+    link(url){
+        if(url.startsWith("http")){
+            return url;
+        }
+        if(url.startsWith("//")){
+            return "https:"+url;
+        }
+        return url;
     },
    loadCssCode(code) {
       var style = document.createElement('style')
@@ -40,6 +61,14 @@ var _tvFunc={
       bottom: 0 !important;
           background-color: rgb(0, 0, 0); 
     }
+ `;
+        this.loadCssCode(css);
+    },
+    fixedW(id){
+        var css=`
+   ${id}{
+        position: fixed !important;
+       }
  `;
         this.loadCssCode(css);
     },
@@ -119,6 +148,28 @@ var _tvFunc={
         }
         return this.video;
     },
+    videoTrueReady(ready,time){
+        let video = this.getVideo();
+        if(null==video){
+            this.check(function (){return document.getElementsByTagName("video").length>0;},function (){
+                video=_tvFunc.getVideo();
+                _tvFunc.check(function (){return video.readyState>2&& video.duration>time;},function (){
+                    console.log("video found ",video.readyState);
+                    if(ready){
+                        ready(video);
+                    }
+                })
+            })
+        }
+        if(null!=video){
+            this.check(function (){return video.readyState>2 && video.duration>time;},function (){
+                console.log("video found ",video.readyState);
+                if(ready){
+                    ready(video);
+                }
+            })
+        }
+    },
     videoPlay(){
         let video = this.getVideo();
         if(video.paused){
@@ -155,8 +206,9 @@ var _tvFunc={
         console.log("currentXj "+item.vodId+"  "+item.site);
         //记录当前
         if(null!=item.vodId&&""!==item.site){
+            let remark= item.title;
             _apiX.msg("history.update",
-                {site:item.site,vodId:item.vodId,url:item.url,remark:"看至"+item.title});
+                {site:item.site,vodId:item.vodId,url:item.url,name:item.name,remark:remark});
         }
     },
     hzLevel(name,type){
@@ -261,6 +313,7 @@ var _apiX={
         _api.message(service,dataStr);
     },
     msgStr(service,dataStr){
+        console.log("msgStr",service,dataStr)
         _api.message(service,dataStr);
     },
     queryByService:async function (service,param,callback){
@@ -349,6 +402,7 @@ var _layer={
         myDiv.id = idName;
         myDiv.style.zIndex=index;
         myDiv.style.visibility="hidden";//hidden  visible
+        myDiv.style.maxWidth="100vw";
         myDiv.style.overflowY="auto";
         if(classNames.length==0){
             myDiv.className="tv-index";
@@ -365,6 +419,9 @@ var _layer={
             }
             if(id.startsWith(".")){
                 document.getElementsByClassName(chooseId)[0].appendChild(myDiv);
+            }
+            if(id.startsWith("&")){
+                document.getElementsByTagName(chooseId)[0].appendChild(myDiv);
             }
         }
         return idName;

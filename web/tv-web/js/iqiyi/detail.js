@@ -15,15 +15,15 @@ const  _ctrlx={
     fullscreen() {
         // 全屏
         //弹幕
-
         _tvFunc.check(function (){
             if($$("#barrage_off").length > 0&&$$("#barrage_off").hasClass("dn")){
-                $$("#barrage_switch").click()
+                console.log("弹幕关");
+                $$("#barrage_switch").click();
             }
             return  $$("#barrage_off").length > 0&&!$$("#barrage_off").hasClass("dn");
         },function (){
 
-        });
+        },2000);
     /*    setInterval(function (){
             if($$("#barrage_off").hasClass("dn")){
                 $$("#barrage_switch").click();
@@ -189,8 +189,9 @@ const _data={
             if(item.content_type===3){
                 remark="预告";
             }
+            console.log("item",item);
             //item.album_order+"."+item.subtitle;
-            let itemData={vodId:vodId,id:item.qipu_id,url:item.page_url,isVip:false,remark:remark,title:title,index:index,"site":"iqiyi.html"};
+            let itemData={vodId:vodId,id:item.qipu_id,url:item.page_url,name:item.short_display_name,isVip:false,remark:remark,title:title,index:index,"site":"iqiyi.html"};
             if(nowId===itemData.id){
                 _data.vue.now.xj=itemData;
                 _tvFunc.currentXj(itemData);

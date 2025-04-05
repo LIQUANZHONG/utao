@@ -1,43 +1,69 @@
-const _ctrlx={
-    play(){
-        _menuCtrl.menu();
-    }
-};
+
+function setupVideo(video) {
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.width = '100vw';
+    container.style.height = '100vh';
+    container.style.zIndex = '2147483647';
+    container.style.backgroundColor = 'black';
+    video.style.width = '100%';
+    video.style.height = '100%';
+    video.style.objectFit = 'contain';
+    video.style.transform = 'translateZ(0)';
+    container.appendChild(video);
+    document.body.appendChild(container);
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+
+}
 (function(){
-    _tvFunc.check(function (){return document.getElementsByTagName("video").length>0;},function (){
-        console.log("video found")
-       // document.getElementsByTagName("video")[0].classList.add("utv-video-full");
-        _tvFunc.fullscreen("video");
-        $$("video").css("position","fixed !important")
-    });
-    let _app={
-        init(){
-            _tvFunc.check(function(){return  document.getElementsByTagName("video").length>0;},function(index){
-                //全屏
-                let menuId = _detailInit(null,999990,true);
-            },1000);
+    _tvFunc.videoReady(function (video){
+        let param=_tvFunc.getQueryParams();
+        let type=0;
+        if(param["utaot"]){
+            type=param["utaot"];
         }
-    };
-    _app.init();
-
-
-})();
-
-let _data={
-    vue:null,
-    initData(vue){
-        this.vue=vue;
-        this.vue.video=false;
-        this.fullscreen();
-    },
-    fullscreen(){
-        //$$("#player_pagefullscreen_msg_player").click();
-        //音量100
-        _tvFunc.volume100();
-        _tvFunc.videoReady(function (video){
-            if(video.paused){
-                video.play();
+        if(type==0){
+            setupVideo(video);
+        }
+        if(type==1){
+            let id="video";
+            if(param["utaoId"]){
+                id="#"+param["utaoId"];
             }
-        })
-    }
-};
+            _tvFunc.fullscreen(id);
+            $$("video").css("position","fixed !important");
+        }
+        video.muted = false;
+        video.volume = 1;
+        video.playsInline = false;
+        video.setAttribute('playsinline', 'false');
+        try {
+            video.play();
+        } catch (e) {
+            video.muted = true;
+            video.play();
+        }
+
+    });
+  /*  _tvFunc.videoReady(function (video){
+        //let elem= $$("video").prop("outerHTML");
+        //$$("body").html(elem);
+        setupVideo(video);
+       /!* let param=_tvFunc.getQueryParams();
+        let id="video";
+        if(param["videoId"]){
+            id="#"+param["videoId"];
+        }
+        _tvFunc.fullscreen(id);
+        $$("video").css("position","fixed !important");
+        $$(".head-nav").hide();
+        if(video.paused){
+            video.play();
+        }
+        _tvFunc.volume100();*!/
+    });*/
+})();

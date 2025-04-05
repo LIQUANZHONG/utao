@@ -1,5 +1,6 @@
 package tv.utao.x5;
 
+import android.app.ActivityManager;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.UUID;
 
 import tv.utao.x5.service.CrashHandler;
+import tv.utao.x5.util.LogUtil;
 
 public class MyApplication extends Application {
 
@@ -34,17 +36,93 @@ public class MyApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.i(TAG, "onViewInitBegin: ");
+        LogUtil.i(TAG, "onViewInitBegin: ");
         context = getApplicationContext();
+        initX5();
         androidId = Settings.System.getString(getContentResolver(), Settings.System.ANDROID_ID);
         if(null==androidId){
-            Log.i(TAG, "androidId: getUUID");
+            LogUtil.i(TAG, "androidId: getUUID");
             androidId=getUUID();
         }
         CrashHandler.getInstance().init(this);
         CrashHandler.uploadExceptionToServer(this);
+        try {
+            System.setProperty("persist.sys.media.use-mediaDrm", "false");
+        } catch (Exception e) {
+            // 安全处理异常
+            LogUtil.e("use-mediaDrm:"+e.getMessage());
+        }
         //startX5WebProcessPreinitService();
+        //initPieWebView();
     }
+    private void  initX5(){
+        // 先初始化设置，再初始化环境
+        try {
+            // 设置参数
+            HashMap<String, Object> map = new HashMap<>();
+            map.put(TbsCoreSettings.TBS_SETTINGS_USE_SPEEDY_CLASSLOADER, true);
+            map.put(TbsCoreSettings.TBS_SETTINGS_USE_DEXLOADER_SERVICE, true);
+            QbSdk.initTbsSettings(map);
+
+            // 设置不依赖 WiFi 下载
+            QbSdk.setDownloadWithoutWifi(true);
+
+            // 禁止使用系统 WebView
+            QbSdk.unForceSysWebView();
+
+            // 初始化 X5 环境
+            QbSdk.initX5Environment(getApplicationContext(), new QbSdk.PreInitCallback() {
+                @Override
+                public void onCoreInitFinished() {
+                    Log.d("App", "X5 Core 初始化完成");
+                }
+
+                @Override
+                public void onViewInitFinished(boolean success) {
+                    Log.d("App", "X5 内核加载 " + (success ? "成功" : "失败"));
+                }
+            });
+        } catch (Exception e) {
+            Log.e("App", "X5 初始化失败", e);
+        }
+    }
+    public static Context getAppContext() {
+        return context;
+    }
+    private static final String PROCESS = "tv.utao.x5";
+    private void initPieWebView() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            String processName = getProcessName(this);
+            if (!PROCESS.equals(processName)) {
+                WebView.setDataDirectorySuffix(getString(processName, "utao"));
+            }
+        }
+    }
+    private void initWebView() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            String processName = getProcessName();
+            WebView.setDataDirectorySuffix(processName);
+        }
+    }
+    public String getProcessName(Context context) {
+        if (context == null) return null;
+        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningAppProcessInfo processInfo : manager.getRunningAppProcesses()) {
+            if (processInfo.pid == android.os.Process.myPid()) {
+                return processInfo.processName;
+            }
+        }
+        return null;
+    }
+
+    public String getString(String s, String defValue) {
+        return isEmpty(s) ? defValue : s;
+    }
+
+    public boolean isEmpty(String s) {
+        return s == null || s.trim().length() == 0;
+    }
+
     public static Context getContext() {
         return context;
     }
@@ -88,7 +166,7 @@ public class MyApplication extends Application {
         String currentProcessName = QbSdk.getCurrentProcessName(this);
         // 设置多进程数据目录隔离，不设置的话系统内核多个进程使用WebView会crash，X5下可能ANR
         WebView.setDataDirectorySuffix(QbSdk.getCurrentProcessName(this));
-        Log.i(TAG, currentProcessName);
+        LogUtil.i(TAG, currentProcessName);
         if (currentProcessName.equals(this.getPackageName())) {
             this.startService(new Intent(this, X5ProcessInitService.class));
             return true;
@@ -115,7 +193,7 @@ public class MyApplication extends Application {
             return;
         }
         //TbsDownloader.startDownload(this);
-        Log.i(TAG, "onViewInitBegin: ");
+        LogUtil.i(TAG, "onViewInitBegin: ");
         /* 设置允许移动网络下进行内核下载。默认不下载，会导致部分一直用移动网络的用户无法使用x5内核 */
         // resetSdk();
         QbSdk.setDownloadWithoutWifi(true);
@@ -130,7 +208,7 @@ public class MyApplication extends Application {
              */
             @Override
             public void onDownloadFinish(int stateCode) {
-                Log.i(TAG, "onDownloadFinished: " + stateCode);
+                LogUtil.i(TAG, "onDownloadFinished: " + stateCode);
             }
 
             /**
@@ -138,7 +216,7 @@ public class MyApplication extends Application {
              */
             @Override
             public void onInstallFinish(int stateCode) {
-                Log.i(TAG, "onInstallFinished: " + stateCode);
+                LogUtil.i(TAG, "onInstallFinished: " + stateCode);
             }
 
             /**
@@ -147,7 +225,7 @@ public class MyApplication extends Application {
              */
             @Override
             public void onDownloadProgress(int progress) {
-                Log.i(TAG, "Core Downloading: " + progress);
+                LogUtil.i(TAG, "Core Downloading: " + progress);
             }
         });
 
@@ -168,7 +246,7 @@ public class MyApplication extends Application {
              */
             @Override
             public void onViewInitFinished(boolean isX5) {
-                Log.i(TAG, "onViewInitFinished: " + isX5);
+                LogUtil.i(TAG, "onViewInitFinished: " + isX5);
                 // hint: you can use QbSdk.getX5CoreLoadHelp(context) anytime to get help.
             }
         });

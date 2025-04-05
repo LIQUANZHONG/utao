@@ -1,4 +1,4 @@
-const TvFocus={
+let TvFocus={
     focusId:".tv-focus",
     focusClass:"tv-focus",
     menuId: null,
@@ -20,7 +20,9 @@ const TvFocus={
             menu(){
                 //_this.keyMenuEvent();
                 _this.menu();
-                _apiX.message("menu",_detailData());
+                let data = _detailData();
+                //console.log("menu",data);
+                _apiX.message("menu",data);
             },
             ok(){
                 _this.keyOkEvent();
@@ -62,12 +64,20 @@ const TvFocus={
     },
     left(){
         if(_isVideo){
+            let duration=_tvFunc.getVideo().duration;
+            if(duration=="Infinity"){
+                return true;
+            }
             _tvFunc.getVideo().currentTime-=20;_layer.notifyLess("进度减20秒");
         }
         return true;
     },
     right(){
         if(_isVideo){
+            let duration=_tvFunc.getVideo().duration;
+            if(duration=="Infinity"){
+                return true;
+            }
             _tvFunc.getVideo().currentTime+=20;_layer.notifyLess("进度加20秒");
         }
         return true;
@@ -239,16 +249,84 @@ const TvFocus={
           rect.right <= (window.innerWidth || document.documentElement.clientWidth)
         );
       },
-      scrollTo() {
-              var el = document.querySelector(this.focusId);
-              var flag= this.isElementInViewport(el);
-              console.log(flag);
-              if(!flag){
-                el.scrollIntoView();
-              }
-              //console.log(offset);
-              //element.scrollIntoView({behavior: "instant", block: "end", inline: "nearest"});
-              //el.scrollIntoView();
+    scrollIntoView(el) {
+        // 找到可滚动的父容器
+        var parent = el.parentElement;
+        var isHeader = el.closest('.tv-header') !== null;
+
+        if (isHeader) {
+            parent = el.closest('.tv-header');
+            // 轻微延迟以确保DOM更新
+            setTimeout(() => {
+                document.body.scrollTop = 0;
+                document.documentElement.scrollTop = 0;
+
+                var elementRect = el.getBoundingClientRect();
+                if (elementRect.right > window.innerWidth) {
+                    parent.scrollLeft += (elementRect.right - window.innerWidth) + 60;
+                } else if (elementRect.left < 0) {
+                    parent.scrollLeft = Math.max(0, parent.scrollLeft + elementRect.left - 60);
+                }
+            }, 50);
+            return;
+        }
+
+        // 查找最近的可滚动容器
+        while (parent) {
+            var style = window.getComputedStyle(parent);
+            var overflow = style.getPropertyValue('overflow');
+            var overflowY = style.getPropertyValue('overflow-y');
+
+            var isScrollable = (overflow === 'auto' || overflow === 'scroll' ||
+                    overflowY === 'auto' || overflowY === 'scroll') &&
+                parent.scrollHeight > parent.clientHeight;
+
+            if (isScrollable) break;
+            parent = parent.parentElement;
+        }
+
+        // 如果没找到可滚动容器，使用document.scrollingElement
+        if (!parent) {
+            parent = document.scrollingElement || document.documentElement;
+        }
+
+        var elementRect = el.getBoundingClientRect();
+        var viewportHeight = window.innerHeight;
+        var viewportWidth = window.innerWidth;
+
+        // 使用 requestAnimationFrame 确保平滑滚动
+        requestAnimationFrame(() => {
+            // 计算垂直滚动
+            if (elementRect.bottom > viewportHeight) {
+                // 向下滚动时，确保元素完全可见
+                var scrollOffset = elementRect.bottom - viewportHeight + 20;
+                parent.scrollTop += scrollOffset;
+            } else if (elementRect.top < 0) {
+                // 向上滚动时，确保元素完全可见
+                parent.scrollTop += elementRect.top - 20;
+            }
+
+            // 计算水平滚动
+            if (elementRect.right > viewportWidth) {
+                parent.scrollLeft += elementRect.right - viewportWidth + 40;
+            } else if (elementRect.left < 0) {
+                parent.scrollLeft = Math.max(0, parent.scrollLeft + elementRect.left - 40);
+            }
+
+            // 强制重绘以防止白屏
+            parent.style.transform = 'translateZ(0)';
+        });
+    },
+    scrollTo: function() {
+        var el = document.querySelector(this.focusId);
+        if (!el) return; // 防止元素不存在时的错误
+        
+        var flag = this.isElementInViewport(el);
+        if (!flag) {
+            setTimeout(() => {
+                el.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+            },50);
+        }
     },
     keyOkEvent() {
         console.log("点击了确认键");
@@ -276,9 +354,11 @@ const TvFocus={
         this.isShow= _layer.toggle(_tv_menuId);
         if(!this.isShow){
             this.focus=null;
+            _apiX.msgStr("menuShow","0");
         }else{
             this.menu();
             this.focus=this.found(this.focusId);
+            _apiX.msgStr("menuShow","1");
         }
     },
     focusEvent(){

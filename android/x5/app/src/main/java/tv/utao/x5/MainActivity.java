@@ -1,16 +1,13 @@
 package tv.utao.x5;
 
-import android.app.ActivityManager;
-import android.content.Context;
 import android.content.res.Configuration;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.widget.Toast;
 
-import java.util.List;
-
 import tv.utao.x5.impl.WebViewClientImpl;
+import tv.utao.x5.util.LogUtil;
+import tv.utao.x5.utils.ToastUtils;
 
 public class MainActivity extends BaseWebViewActivity {
     private long mClickBackTime = 0;
@@ -18,7 +15,7 @@ public class MainActivity extends BaseWebViewActivity {
         if(event.getAction() == KeyEvent.ACTION_DOWN){
             float x= event.getX();
             float y= event.getY();
-            //Log.i("dispatchTouchEvent", "x" + x+"y "+y);
+            //LogUtil.i("dispatchTouchEvent", "x" + x+"y "+y);
             if(x<100f&&y<100f) {
                 ctrl("menu");
             }
@@ -27,14 +24,16 @@ public class MainActivity extends BaseWebViewActivity {
     }
 
     private boolean ctrl(String code){
-        String  js= "_menuCtrl."+code+"()";
-        Log.i(TAG,js);
-        mWebView.evaluateJavascript(js,null);
+        if (mWebView != null) {
+            String  js= "_menuCtrl."+code+"()";
+            LogUtil.i(TAG,js);
+            mWebView.evaluateJavascript(js,null);
+        }
         return true;
     }
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
-        Log.i(TAG,"onConfigurationChanged...."+newConfig.orientation);
+        LogUtil.i(TAG,"onConfigurationChanged...."+newConfig.orientation);
         super.onConfigurationChanged(newConfig);
         // 检查屏幕方向是否改变
         if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -49,7 +48,7 @@ public class MainActivity extends BaseWebViewActivity {
             return super.dispatchKeyEvent(event);
         }
         int keyCode = event.getKeyCode();
-        Log.i("keyDown keyCode ", keyCode+" event" + event);
+        LogUtil.i("keyDown keyCode ", keyCode+" event" + event);
         boolean isMenuShow=isMenuShow();
         if(isMenuShow){
             if(keyCode==KeyEvent.KEYCODE_BACK||keyCode==KeyEvent.KEYCODE_MENU||keyCode==KeyEvent.KEYCODE_TAB){
@@ -62,7 +61,11 @@ public class MainActivity extends BaseWebViewActivity {
             return keyBack();
         }
         if(keyCode==KeyEvent.KEYCODE_DPAD_CENTER||keyCode==KeyEvent.KEYCODE_ENTER){
+            if(openOkMenu()&&!WebViewClientImpl.currentUrlIsHome()){
+                return ctrl("menu");
+            }
             return ctrl("ok");
+           // return super.dispatchKeyEvent(event);
         }
         if(keyCode==KeyEvent.KEYCODE_MENU||keyCode==KeyEvent.KEYCODE_TAB){
             return ctrl("menu");
@@ -83,12 +86,12 @@ public class MainActivity extends BaseWebViewActivity {
                 ||keyCode==KeyEvent.KEYCODE_VOLUME_MUTE){
             return super.dispatchKeyEvent(event);
         }
-        return ctrl("menu");
-        //return super.dispatchKeyEvent(event);
+       // return ctrl("menu");
+        return super.dispatchKeyEvent(event);
     }
     private boolean keyBack(){
         String url = WebViewClientImpl.backUrl();
-        Log.i("keyBack","keyBack "+url);
+        LogUtil.i("keyBack","keyBack "+url);
         //NextPlusNavigationDelegate.backUrl();
         if(null==url){
             long currentTime = System.currentTimeMillis();
@@ -98,7 +101,7 @@ public class MainActivity extends BaseWebViewActivity {
                 //super.onBackPressed();
                 //System.exit(0);
             } else {
-                Toast.makeText(this, "再按一次返回键退出", Toast.LENGTH_SHORT).show();
+                ToastUtils.show(this, "再按一次返回键退出", Toast.LENGTH_SHORT);
                 mClickBackTime = currentTime;
             }
         }else{
@@ -107,21 +110,17 @@ public class MainActivity extends BaseWebViewActivity {
         //detail-> home-> index
         return true;
     }
-    public void killAppProcess()
-    {
-        //注意：不能先杀掉主进程，否则逻辑代码无法继续执行，需先杀掉相关进程最后杀掉主进程
-        ActivityManager mActivityManager = (ActivityManager)this.getSystemService(Context.ACTIVITY_SERVICE);
-        List<ActivityManager.RunningAppProcessInfo> mList = mActivityManager.getRunningAppProcesses();
-        for (ActivityManager.RunningAppProcessInfo runningAppProcessInfo : mList)
-        {
-            if (runningAppProcessInfo.pid != android.os.Process.myPid())
-            {
-                android.os.Process.killProcess(runningAppProcessInfo.pid);
-            }
+
+    @Override
+    public void onDestroy() {
+        if(mWebView!=null){
+            LogUtil.i(TAG,"onDestroy");
+            mWebView.loadDataWithBaseURL(null, "", "text/html", "utf-8", null);
+            mWebView.destroy();
         }
-        android.os.Process.killProcess(android.os.Process.myPid());
-        System.exit(0);
+        super.onDestroy();
     }
+
 
 
 }

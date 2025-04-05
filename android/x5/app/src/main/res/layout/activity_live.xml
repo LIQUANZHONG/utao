@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+        <variable
+            name="live"
+            type="tv.utao.x5.domain.live.Live" />
+    </data>
+
+    <FrameLayout
+        android:id="@+id/liveWebViewContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/darker_gray">
+        <LinearLayout
+            android:id="@+id/webviewWrapper"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#E3EDCD"
+            android:gravity="center"
+            android:focusable="true"
+            android:visibility="visible"
+            android:orientation="vertical">
+            <com.tencent.smtt.sdk.WebView
+                android:id="@+id/webView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="visible"
+                android:focusable="false" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/fullscreen"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#E3EDCD"
+            android:focusable="true"
+            android:gravity="center"
+            android:visibility="gone"
+            android:orientation="vertical">
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/notify"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:gravity="center"
+            android:focusable="false"
+            android:visibility="visible"
+            android:orientation="vertical">
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:background="#FAF9DE"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:id="@+id/liveName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="@dimen/fontDefault"
+                    android:textColor="@color/black"
+                     />
+            </LinearLayout>
+
+        </LinearLayout>
+        <!-- 菜单容器 -->
+        <FrameLayout
+            android:id="@+id/menuContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#00000000"
+            android:visibility="gone"
+            android:clickable="true"
+            android:focusable="true">
+
+            <LinearLayout
+                android:layout_width="240dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="start"
+                android:background="#80000000"
+                android:orientation="vertical">
+
+                <!-- 省份标题栏 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- 左右切换按钮区域 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/prevProvince"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_weight="1"
+                            android:text="←"
+                            android:textSize="20sp"
+                            android:textColor="#FFFFFF"
+                            android:background="#80000000"
+                            android:focusable="false"/>
+
+                        <Button
+                            android:id="@+id/nextProvince"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_weight="1"
+                            android:text="→"
+                            android:textSize="20sp"
+                            android:textColor="#FFFFFF"
+                            android:background="#80000000"
+                            android:focusable="false"/>
+
+                    </LinearLayout>
+
+                    <!-- 省份名称显示区域 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="8dp"
+                        android:gravity="center">
+
+                        <TextView
+                            android:id="@+id/provinceName"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:textColor="#FFFFFF"
+                            android:textSize="20sp"/>
+
+                        <TextView
+                            android:id="@+id/provinceCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:textColor="#FFFFFF"
+                            android:textSize="16sp"/>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- 频道列表 -->
+                <ListView
+                    android:id="@+id/channelList"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:divider="#33FFFFFF"
+                    android:dividerHeight="1dp"
+                    android:listSelector="@drawable/menu_button_background"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:descendantFocusability="afterDescendants"/>
+
+            </LinearLayout>
+        </FrameLayout>
+    </FrameLayout>
+</layout>
